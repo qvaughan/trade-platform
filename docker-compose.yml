@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+
+    db:
+        image: postgres:10-alpine
+        environment:
+            - PGDATA=${PGDATA:-/var/lib/postgresql/data/pgdata}
+            - POSTGRES_USER=${POSTGRES_USER:-user}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+            - POSTGRES_DB=${POSTGRES_DB:-tradebot}
+        volumes:
+            - ./volumes/pgdata:${PGDATA:-/var/lib/postgresql/data/pgdata}
+        ports:
+            - 5432:5432
+        restart: always
+
+
+    flyway:
+        image: boxfuse/flyway:5-alpine
+        entrypoint:
+            - ./entrypoint.sh
+            - flyway
+            - -url=jdbc:postgresql://db/${POSTGRES_DB:-tradebot}
+            - -user=${POSTGRES_USER:-user}
+            - -password=${POSTGRES_PASSWORD:-password}
+            - migrate
+        volumes:
+            - "./flyway/sql:/flyway/sql"
+            - "./flyway/entrypoint.sh:/flyway/entrypoint.sh"
+            - "./flyway/status:/flyway/status"
+        depends_on:
+            - db
+
+
+    data-collector:
+        build: ./data-collector
+        depends_on:
+            - flyway
+        volumes:
+            - "./flyway/status:/flyway/status"
+        environment:
+            - COINMARKETCAP_COLLECTOR_TOPIC=collectors/coinmarketcap
+            - DB_HOST=db
+            - DB_NAME=${POSTGRES_DB:-tradebot}
+            - DB_USER=${POSTGRES_USER:-user}
+            - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+        restart: always
+
