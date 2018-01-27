@@ -6,6 +6,7 @@ import os
 import json
 import logging
 
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 COINMARKETCAP_COLLECTOR_TOPIC = os.getenv("COINMARKETCAP_COLLECTOR_TOPIC")
@@ -32,7 +33,7 @@ def retrieve_coin_market_cap_data():
     try:
         r = requests.get("https://api.coinmarketcap.com/v1/ticker/", params={"limit": 0})
         data = r.json()
-        if logger.getEffectiveLevel() == logging.DEBUG:
+        if logger.isEnabledFor(logging.DEBUG):
             logger.debug("Retrieved data from coinmarketcap: %s" % json.dumps(data))
         result = {"data": data, "collected_datetime": datetime.datetime.utcnow().__str__()}
     except:
@@ -46,13 +47,14 @@ def save_coin_market_cap_data(data):
     logger.debug("Saving coinmarketcap data")
     insert_sql = "INSERT INTO COINMARKETCAP(id, name, symbol, rank, price_usd, price_btc, volume_24h_usd, " \
                  "market_cap_usd, available_supply, total_supply, max_supply, percent_change_1h, percent_change_24h, " \
-                 "percent_change_7d, last_updated, collected_datetime) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, " \
-                 "%s, %s, %s, %s, %s, %s, %s)"
+                 "percent_change_7d, last_updated, collected_datetime) SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, " \
+                 "%s, %s, %s, %s, %s, %s, %s WHERE NOT EXISTS (SELECT 1 FROM COINMARKETCAP WHERE symbol = %s AND " \
+                 "last_updated = %s)"
     conn = cp.getconn()
     try:
         with conn.cursor() as curs:
             for item in data["data"]:
-                if logger.getEffectiveLevel() == logging.DEBUG:
+                if logger.isEnabledFor(logging.DEBUG):
                     logger.debug("Inserting coinmarketcap item: %s" % json.dumps(item))
                 # Use another try block here so if one record insert fails, we continue saving the rest.
                 try:
@@ -60,7 +62,8 @@ def save_coin_market_cap_data(data):
                                           item["price_btc"], item["24h_volume_usd"], item["market_cap_usd"],
                                           item["available_supply"], item["total_supply"], item["max_supply"],
                                           item["percent_change_1h"], item["percent_change_24h"],
-                                          item["percent_change_7d"], item["last_updated"], data["collected_datetime"]))
+                                          item["percent_change_7d"], item["last_updated"], data["collected_datetime"],
+                                          item["symbol"], item["last_updated"]))
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
