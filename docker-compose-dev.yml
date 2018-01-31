@@ -8,3 +8,11 @@ services:
     data-collector:
         environment:
             - LOG_LEVEL=DEBUG
+
+    web-app:
+        environment:
+            - LOG_LEVEL=DEBUG
+
+    nginx:
+        ports:
+            8080:80

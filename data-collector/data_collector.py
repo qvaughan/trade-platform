@@ -37,7 +37,7 @@ def retrieve_coin_market_cap_data():
             logger.debug("Retrieved data from coinmarketcap: %s" % json.dumps(data))
         result = {"data": data, "collected_datetime": datetime.datetime.utcnow().__str__()}
     except:
-        logging.exception("Exception occurred while retrieving coinmarketcap data.")
+        logger.exception("Exception occurred while retrieving coinmarketcap data.")
         result = None
 
     return result
@@ -67,9 +67,9 @@ def save_coin_market_cap_data(data):
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    logging.exception("Error occurred while saving coinmarketcap data record.")
+                    logger.exception("Error occurred while saving coinmarketcap data record.")
     except Exception as e:
-        logging.exception("Error occurred while saving coinmarketcap data.")
+        logger.exception("Error occurred while saving coinmarketcap data.")
     finally:
         cp.putconn(conn)
 
